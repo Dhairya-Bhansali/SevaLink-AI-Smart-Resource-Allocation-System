@@ -1,0 +1,62 @@
+# =========================
+# Python
+# =========================
+
+# Virtual environments
+venv/
+env/
+ENV/
+sevalink-ai-backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python build
+build/
+dist/
+*.egg-info/
+
+# Environment variables
+.env
+
+# =========================
+# Node.js
+# =========================
+
+node_modules/
+dist/
+dist-ssr/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Editor Files
+# =========================
+
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# =========================
+# OS Files
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Misc
+# =========================
+
+*.local
+*.tmp
+*.swp

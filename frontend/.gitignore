@@ -21,7 +21,10 @@ dist/
 
 # Environment variables
 .env
-
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 # =========================
 # Node.js
 # =========================

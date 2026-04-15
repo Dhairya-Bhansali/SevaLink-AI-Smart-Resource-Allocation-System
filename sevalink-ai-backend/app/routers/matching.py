@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from .. import database
 from ..models import needs as need_model
 from ..models import volunteer as vol_model
@@ -66,7 +67,8 @@ def recommend_needs_for_volunteer(volunteer_id: int, db: Session = Depends(datab
             matches.append({"need": n_data, "match_score": score})
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
-from pydantic import BaseModel
+    return {"volunteer_id": vol.id, "matches": matches}
+
 
 class MatchRequest(BaseModel):
     need_id: int
@@ -96,4 +98,4 @@ def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db)):
                 })
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
-    return {"need_id": need.id, "matches": matches[:5]}
+    return {"need_id": need.id, "matches": matches[:5], "total_found": len(matches)}

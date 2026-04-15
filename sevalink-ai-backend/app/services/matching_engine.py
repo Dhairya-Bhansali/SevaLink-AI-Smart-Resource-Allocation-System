@@ -43,7 +43,7 @@ def batch_score_volunteers_for_need(volunteers, need) -> list:
         genai.configure(api_key=gemini_api_key)
         
         # We explicitly enforce JSON array response
-        model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+        model = genai.GenerativeModel('gemini-1.5-flash-latest', generation_config={"response_mime_type": "application/json"})
         
         v_list = [{"id": v.id, "location": v.location, "skills": v.skills} for v in volunteers]
         need_info = {"location": need.location, "type": need.need_type, "urgency": need.urgency_level}
@@ -67,7 +67,8 @@ def batch_score_volunteers_for_need(volunteers, need) -> list:
         """
         
         response = model.generate_content(prompt)
-        ai_scores = json.loads(response.text)
+        raw = response.text.strip().strip("```json").strip("```").strip()
+        ai_scores = json.loads(raw)
         
         # Ensure we return valid format
         return [{"id": item["id"], "score": item["score"], "reason": item.get("reason", "AI Matched")} for item in ai_scores]

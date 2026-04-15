@@ -279,7 +279,7 @@ const Dashboard = () => {
               <div key={idx} className="relative pl-6 border-l border-teal-500/30 pb-4 last:pb-0">
                 <div className="absolute w-3 h-3 bg-teal-500 rounded-full -left-[6.5px] top-1 shadow-[0_0_8px_rgba(20,184,166,0.6)]"></div>
                 <div className="text-sm font-semibold text-white">{need.location} reported a need</div>
-                <div className="text-xs text-slate-400 mt-1">Resource: {need.need_type} • Score: {need.priority_score.toFixed(1)}</div>
+                <div className="text-xs text-slate-400 mt-1">Resource: {need.need_type} • Score: {need.priority_score?.toFixed(1) ?? 'N/A'}</div>
               </div>
             ))}
             <div className="relative pl-6 border-l border-teal-500/30 pb-4 last:pb-0">

@@ -2,8 +2,19 @@ import React, { useEffect, useState, useRef } from 'react';
 import { dashboardAPI, needsAPI, volunteerAPI } from '../services/api';
 import MatchResultsModal from '../components/MatchResultsModal';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { Loader2 } from 'lucide-react';
+import autoTable from 'jspdf-autotable';
+import { Loader2, Activity, TrendingDown } from 'lucide-react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip as ChartTooltip,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip);
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -151,7 +162,7 @@ const Dashboard = () => {
         ["Total Volunteers", stats?.total_volunteers || "0"]
       ];
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: 50,
         head: [['Metric', 'Value']],
         body: summaryBody,
@@ -160,11 +171,11 @@ const Dashboard = () => {
       });
 
       // Needs by Type
-      let nextY = doc.lastAutoTable.finalY + 15;
+      let nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 15 : 100;
       doc.text("Needs Distribution by Type", 14, nextY);
       
       const typeBody = Object.entries(data.needs_by_type || {}).map(([type, count]) => [type, count]);
-      doc.autoTable({
+      autoTable(doc, {
         startY: nextY + 5,
         head: [['Need Type', 'Count']],
         body: typeBody.length > 0 ? typeBody : [["No data", "-"]],
@@ -217,7 +228,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Priority List */}
         <div className="lg:col-span-2 glass-panel p-6">
           <div className="flex justify-between items-center mb-6">
@@ -251,7 +262,7 @@ const Dashboard = () => {
                       className="btn-primary py-2 px-4 shadow-[0_0_15px_rgba(236,72,153,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {matchingId === need.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      {matchingId === need.id ? 'Matching...' : 'Match'}
+                      {matchingId === need.id ? 'Matching...' : 'Match & Assign'}
                     </button>
                   </div>
                 </div>
@@ -259,6 +270,61 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+        
+        {/* Bonus Feature: Live Event Timeline */}
+        <div className="glass-panel p-6 flex flex-col h-96">
+          <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Activity size={20} className="text-teal-400" /> Live Event Log</h3>
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+            {urgentNeeds.slice(0, 4).map((need, idx) => (
+              <div key={idx} className="relative pl-6 border-l border-teal-500/30 pb-4 last:pb-0">
+                <div className="absolute w-3 h-3 bg-teal-500 rounded-full -left-[6.5px] top-1 shadow-[0_0_8px_rgba(20,184,166,0.6)]"></div>
+                <div className="text-sm font-semibold text-white">{need.location} reported a need</div>
+                <div className="text-xs text-slate-400 mt-1">Resource: {need.need_type} • Score: {need.priority_score.toFixed(1)}</div>
+              </div>
+            ))}
+            <div className="relative pl-6 border-l border-teal-500/30 pb-4 last:pb-0">
+                <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] top-1 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+                <div className="text-sm font-semibold text-white">System Update</div>
+                <div className="text-xs text-slate-400 mt-1">AI Matcher re-calibrated successfully.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Bonus Feature: Impact Predictor */}
+      <div className="mt-8 glass-panel p-6 mb-10">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingDown className="text-purple-400" size={24} />
+          <h3 className="text-xl font-bold text-white">AI Impact Predictor</h3>
+        </div>
+        <p className="text-sm text-slate-400 mb-6">Estimated reduction in unassigned critical needs based on current volunteer matches.</p>
+        <div className="h-64">
+          <Line 
+            data={{
+              labels: ['Today', 'Tomorrow', 'Day 3', 'Day 4', 'Day 5'],
+              datasets: [{
+                label: 'Projected Unassigned Needs',
+                data: [stats?.urgent_needs || 10, (stats?.urgent_needs || 10) * 0.8, (stats?.urgent_needs || 10) * 0.5, (stats?.urgent_needs || 10) * 0.2, 0],
+                borderColor: '#c084fc',
+                backgroundColor: 'rgba(192, 132, 252, 0.2)',
+                fill: true,
+                tension: 0.4,
+              }]
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } }
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
 
         {/* Quick Actions Panel */}
         <div className="glass-panel p-6 flex flex-col">

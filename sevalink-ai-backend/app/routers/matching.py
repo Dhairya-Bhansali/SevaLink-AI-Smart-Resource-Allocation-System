@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .. import database
 from ..models import needs as need_model
 from ..models import volunteer as vol_model
-from ..services.matching_engine import score_volunteer_for_need
+from ..services.matching_engine import batch_score_volunteers_for_need
 
 router = APIRouter(
     prefix="/api/matches",
@@ -19,17 +19,19 @@ def recommend_volunteers_for_need(need_id: int, db: Session = Depends(database.g
     volunteers = db.query(vol_model.Volunteer).all()
     
     matches = []
-    for vol in volunteers:
-        score = score_volunteer_for_need(vol, need)
-        if score > 0:
-            # Dump minimal representation for matching dashboard
-            v_data = {
-                "id": vol.id,
-                "name": vol.name,
-                "location": vol.location,
-                "skills": vol.skills
-            }
-            matches.append({"volunteer": v_data, "match_score": score})
+    batched_results = batch_score_volunteers_for_need(volunteers, need)
+    
+    for result in batched_results:
+        if result["score"] > 0:
+            vol = next((v for v in volunteers if v.id == result["id"]), None)
+            if vol:
+                v_data = {
+                    "id": vol.id,
+                    "name": vol.name,
+                    "location": vol.location,
+                    "skills": vol.skills
+                }
+                matches.append({"volunteer": v_data, "match_score": result["score"], "reason": result.get("reason")})
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
     return {"need": need, "recommended_volunteers": matches}
@@ -44,8 +46,14 @@ def recommend_needs_for_volunteer(volunteer_id: int, db: Session = Depends(datab
     needs = db.query(need_model.Need).all()
     
     matches = []
+    # Note: `batch_score_volunteers_for_need` is specifically designed to score Many Volunteers against One Need.
+    # To score Many Needs against One Volunteer (which is what this endpoint does),
+    # we would need a different prompt or we just fallback to the loop. Let's use loop of fallback for now to keep it simple,
+    # or loop through Gemini for each need. Since this endpoint `recommend_needs_for_volunteer` isn't used in MVP Dashboard yet,
+    from ..services.matching_engine import fallback_score_volunteer_for_need
+    
     for need in needs:
-        score = score_volunteer_for_need(vol, need)
+        score = fallback_score_volunteer_for_need(vol, need)
         if score > 0:
             n_data = {
                 "id": need.id,
@@ -72,16 +80,20 @@ def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db)):
     volunteers = db.query(vol_model.Volunteer).all()
     
     matches = []
-    for vol in volunteers:
-        score = score_volunteer_for_need(vol, need)
-        if score > 0:
-            matches.append({
-                "id": vol.id,
-                "name": vol.name,
-                "location": vol.location,
-                "skills": vol.skills,
-                "match_score": score
-            })
+    batched_results = batch_score_volunteers_for_need(volunteers, need)
+    
+    for result in batched_results:
+        if result["score"] > 0:
+            vol = next((v for v in volunteers if v.id == result["id"]), None)
+            if vol:
+                matches.append({
+                    "id": vol.id,
+                    "name": vol.name,
+                    "location": vol.location,
+                    "skills": vol.skills,
+                    "match_score": result["score"],
+                    "reason": result.get("reason")
+                })
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
     return {"need_id": need.id, "matches": matches[:5]}

@@ -38,14 +38,13 @@ const MatchResultsModal = ({ isOpen, onClose, matches, need }) => {
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                      {match.volunteer?.name || 'Volunteer'}
+                      {match.name || 'Volunteer'}
                       <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                        {match.match_score ? `${(match.match_score * 100).toFixed(0)}% Match` : 'Matched'}
+                        {typeof match.match_score === 'number' ? `${match.match_score.toFixed(0)}% Match` : 'Matched'}
                       </span>
                     </h3>
                     <div className="flex items-center text-sm text-slate-400 gap-4">
-                      <span className="flex items-center gap-1"><MapPin size={14} /> {match.volunteer?.location || 'Unknown'}</span>
-                      <span className="flex items-center gap-1"><Star size={14} /> {(match.distance_km || 0).toFixed(1)} km away</span>
+                      <span className="flex items-center gap-1"><MapPin size={14} /> {match.location || 'Unknown'}</span>
                     </div>
                   </div>
                   <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-blue-500/30">
@@ -56,12 +55,25 @@ const MatchResultsModal = ({ isOpen, onClose, matches, need }) => {
                 <div className="mt-3">
                   <div className="text-xs text-slate-500 mb-2 uppercase font-semibold">Matched Skills</div>
                   <div className="flex flex-wrap gap-2">
-                    {match.volunteer?.skills?.split(',').map((skill, sIdx) => (
-                      <span key={sIdx} className="text-xs bg-white/5 text-slate-300 px-2 py-1 rounded-md border border-white/10">
-                        {skill.trim()}
-                      </span>
-                    ))}
+                    {Array.isArray(match.skills) 
+                      ? match.skills.map((skill, sIdx) => (
+                          <span key={sIdx} className="text-xs bg-white/5 text-slate-300 px-2 py-1 rounded-md border border-white/10">
+                            {skill}
+                          </span>
+                        ))
+                      : typeof match.skills === 'string' 
+                        ? match.skills.split(',').map((skill, sIdx) => (
+                            <span key={sIdx} className="text-xs bg-white/5 text-slate-300 px-2 py-1 rounded-md border border-white/10">
+                              {skill.trim()}
+                            </span>
+                          ))
+                        : null}
                   </div>
+                  {match.reason && (
+                    <div className="mt-3 text-sm text-blue-300/80 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
+                      <strong>AI Suggestion:</strong> {match.reason}
+                    </div>
+                  )}
                 </div>
               </div>
             ))

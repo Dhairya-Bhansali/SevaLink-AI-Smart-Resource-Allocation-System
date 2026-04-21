@@ -1,9 +1,20 @@
 import os
 import json
 
+from ..utils.distance import calculate_distance
+
 def fallback_score_volunteer_for_need(volunteer, need) -> int:
     score = 0
-    if volunteer.location.lower() == need.location.lower():
+    
+    if volunteer.lat is not None and need.lat is not None:
+        dist = calculate_distance(volunteer.lat, volunteer.lng, need.lat, need.lng)
+        if dist <= 10:
+            score += 50
+        elif dist <= 50:
+            score += 30
+        elif dist <= 100:
+            score += 15
+    elif volunteer.location.lower() == need.location.lower():
         score += 50
         
     need_skills_map = {

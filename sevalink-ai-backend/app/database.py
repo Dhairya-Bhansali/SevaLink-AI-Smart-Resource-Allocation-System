@@ -1,10 +1,13 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Replace with actual Hackathon PostgreSQL URI. 
 # Using SQLite fallback for instant local testing if Postgres isn't ready.
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sevalink_mvp.db"
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/sevalink"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sevalink_mvp.db")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 

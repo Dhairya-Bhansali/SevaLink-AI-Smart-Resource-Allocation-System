@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON
+from sqlalchemy import Column, Integer, String,Float,JSON
 from .base import Base
 
 class Volunteer(Base):
@@ -12,3 +12,5 @@ class Volunteer(Base):
     # Store lists as JSON strings for simplicity if not using strictly Postgres Array
     # e.g., ["Medical", "Logistics"]
     skills = Column(JSON, default=list)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)

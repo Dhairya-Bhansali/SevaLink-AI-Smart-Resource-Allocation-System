@@ -6,6 +6,8 @@ class VolunteerBase(BaseModel):
     location: str
     availability: str
     skills: List[str] = []
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 class VolunteerCreate(VolunteerBase):
     pass

@@ -7,6 +7,8 @@ class NeedBase(BaseModel):
     need_type: str
     people_affected: int
     urgency_level: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 class NeedCreate(NeedBase):
     pass

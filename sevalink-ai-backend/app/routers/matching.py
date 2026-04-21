@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from .. import database
 from ..models import needs as need_model
 from ..models import volunteer as vol_model
 from ..services.matching_engine import batch_score_volunteers_for_need
+from ..utils.notifier import log_notification
 
 router = APIRouter(
     prefix="/api/matches",
@@ -74,7 +76,8 @@ class MatchRequest(BaseModel):
     need_id: int
 
 @router.post("/match-volunteers")
-def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db)):
+def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
     need = db.query(need_model.Need).filter(need_model.Need.id == req.need_id).first()
     if not need:
         raise HTTPException(status_code=404, detail="Need not found")
@@ -98,4 +101,32 @@ def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db)):
                 })
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
+    
+    if len(matches) > 0:
+        log_notification(db, f"Allocated {len(matches)} volunteers dynamically to Task #{need.id} in {need.location}", "info")
+        
     return {"need_id": need.id, "matches": matches[:5], "total_found": len(matches)}
+
+from ..services.optimized_matching import optimized_batch_matching
+
+@router.post("/optimized")
+def get_optimized_matching(db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    
+    volunteers = db.query(vol_model.Volunteer).all()
+    # Only try to allocate high urgency needs
+    needs = db.query(need_model.Need).filter(need_model.Need.urgency_level.in_(["High", "Critical"])).all()
+    
+    if not volunteers or not needs:
+        return {"assignments": [], "message": "Not enough data to optimize."}
+        
+    try:
+        assignments = optimized_batch_matching(volunteers, needs)
+        if len(assignments) > 0:
+            log_notification(db, f"Global Optimization successfully allocated {len(assignments)} routes globally.", "info")
+        return {"assignments": assignments, "message": "Optimal global matching generated successfully"}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Optimization failed: {e}")
+        return {"assignments": [], "message": "Optimization failed, use standard matching mode."}
+

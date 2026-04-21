@@ -11,3 +11,5 @@ class Need(Base):
     people_affected = Column(Integer)
     urgency_level = Column(String) # Low, Medium, High, Critical
     priority_score = Column(Float, default=0.0)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)

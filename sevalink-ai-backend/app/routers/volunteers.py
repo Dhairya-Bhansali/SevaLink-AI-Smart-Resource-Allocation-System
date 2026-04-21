@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends
+from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session
 from typing import List
 from .. import database
 from ..models import volunteer as model
 from ..schemas import volunteer as schema
+from ..utils.geolocation import get_coordinates
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -11,8 +13,15 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=schema.VolunteerResponse)
-def create_volunteer(volunteer: schema.VolunteerCreate, db: Session = Depends(database.get_db)):
-    db_volunteer = model.Volunteer(**volunteer.model_dump())
+def create_volunteer(volunteer: schema.VolunteerCreate, db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    v_data = volunteer.model_dump()
+    if v_data.get("lat") is None or v_data.get("lng") is None:
+        lat, lng = get_coordinates(volunteer.location)
+        v_data["lat"] = lat
+        v_data["lng"] = lng
+
+    db_volunteer = model.Volunteer(**v_data)
     db.add(db_volunteer)
     db.commit()
     db.refresh(db_volunteer)

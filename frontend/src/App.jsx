@@ -1,19 +1,33 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import MapPage from './pages/MapPage'
 import Analytics from './pages/Analytics'
 import VolunteerRegistration from './pages/VolunteerRegistration'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 const navLinks = [
-  { name: 'Command Center', path: '/',          icon: '⚡', desc: 'Dashboard' },
-  { name: 'Needs Map',      path: '/map',        icon: '🗺️', desc: 'Live Map' },
-  { name: 'Analytics',      path: '/analytics',  icon: '📊', desc: 'Charts' },
-  { name: 'Volunteers',     path: '/volunteer',  icon: '👥', desc: 'Register' },
+  { name: 'Command Center', path: '/',          icon: '⚡', desc: 'Dashboard', protected: true },
+  { name: 'Needs Map',      path: '/map',        icon: '🗺️', desc: 'Live Map', protected: true },
+  { name: 'Analytics',      path: '/analytics',  icon: '📊', desc: 'Charts', protected: true },
+  { name: 'Volunteers',     path: '/volunteer',  icon: '👥', desc: 'Register', protected: true },
 ];
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
+
+  // Hide sidebar on auth pages
+  if (['/login', '/register'].includes(location.pathname)) return null;
 
   return (
     <div className="w-64 h-screen fixed top-0 left-0 flex flex-col z-20"
@@ -42,7 +56,7 @@ const Sidebar = () => {
       <div className="mx-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}></div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 flex flex-col gap-1.5 mt-2">
+      <nav className="flex-1 p-4 flex flex-col gap-1.5 mt-2 overflow-y-auto">
         <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 mb-2">Navigation</p>
         {navLinks.map((link) => {
           const isActive = location.pathname === link.path;
@@ -72,6 +86,14 @@ const Sidebar = () => {
 
       {/* Footer */}
       <div className="p-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        {isAuthenticated && (
+          <button 
+            onClick={handleLogout} 
+            className="w-full mb-4 py-2 text-sm bg-red-600 hover:bg-red-500 rounded-lg text-white font-bold transition"
+          >
+            Logout
+          </button>
+        )}
         <div className="text-xs text-slate-600">
           <p className="font-semibold text-slate-500">SevaLink AI v2.0</p>
           <p className="mt-0.5">Powered by Gemini 1.5 Flash</p>
@@ -81,22 +103,42 @@ const Sidebar = () => {
   );
 };
 
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) return <Navigate to="/login" />;
+  return children;
+};
+
+// Also we need to export Main block because Sidebar uses useNavigate
+const MainContent = () => {
+  const location = useLocation();
+  const isAuthPage = ['/login', '/register'].includes(location.pathname);
+  
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <main className={`${isAuthPage ? 'w-full' : 'ml-64 flex-1'} p-8 max-w-full overflow-x-hidden`}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/volunteer" element={<ProtectedRoute><VolunteerRegistration /></ProtectedRoute>} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
 function App() {
   return (
     <Router>
-      <div className="flex min-h-screen">
-        <Sidebar />
-        <main className="ml-64 flex-1 p-8 max-w-full overflow-x-hidden">
-          <Routes>
-            <Route path="/"          element={<Dashboard />} />
-            <Route path="/map"       element={<MapPage />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/volunteer" element={<VolunteerRegistration />} />
-          </Routes>
-        </main>
-      </div>
+      <MainContent />
+      <ToastContainer theme="dark" position="top-right" />
     </Router>
   );
 }
 
 export default App;
+

@@ -20,15 +20,20 @@ def get_dashboard_stats(db: Session = Depends(database.get_db)):
     
     total_volunteers = db.query(vol_model.Volunteer).count()
     
-    # We don't have a matched tasks table in MVP, so we mock or calculate based on potential matches.
-    # We will mock a number for demonstration, or we can just return a placeholder.
-    matched_tasks = int(total_needs * 0.4) 
+    # Free volunteers = volunteers not currently needed for any active need
+    # (i.e. volunteers in excess of current needs count)
+    # If more volunteers than needs => some are free; otherwise all are busy
+    free_volunteers = max(0, total_volunteers - total_needs)
+    assigned_volunteers = min(total_volunteers, total_needs)
+    matched_tasks = assigned_volunteers  # approximation: 1 volunteer per need
     
     return {
         "total_needs": total_needs,
         "urgent_needs": urgent_needs,
         "total_volunteers": total_volunteers,
-        "matched_tasks": matched_tasks
+        "free_volunteers": free_volunteers,
+        "assigned_volunteers": assigned_volunteers,
+        "matched_tasks": matched_tasks,
     }
 
 @router.get("/analytics")
@@ -48,7 +53,6 @@ def get_dashboard_analytics(db: Session = Depends(database.get_db)):
                 volunteers_by_skill[s] = volunteers_by_skill.get(s, 0) + 1
                 
     # needs_over_time (mocked for MVP since Need doesn't have a created_at field in MVP schema)
-    # Just creating a dummy 7-day trend
     needs_over_time = {
         "dates": ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"],
         "counts": [5, 12, 8, 20, 15, 30, 25]

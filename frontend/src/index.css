@@ -115,11 +115,18 @@ body {
 }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-/* Pulsing urgent dot */
-.pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
-@keyframes pulseDot {
+/* Pulsing urgent dot (red) */
+.pulse-dot { animation: pulseDotRed 1.8s ease-in-out infinite; }
+@keyframes pulseDotRed {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
   50%       { box-shadow: 0 0 0 9px rgba(239, 68, 68, 0); }
+}
+
+/* Pulsing online dot (green) */
+.pulse-dot-green { animation: pulseDotGreen 2.5s ease-in-out infinite; }
+@keyframes pulseDotGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+  50%       { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
 }
 
 /* Pulsing badge */
@@ -164,3 +171,34 @@ body {
 .leaflet-control-zoom-in,
 .leaflet-control-zoom-out,
 .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+/* Custom Map Tooltip */
+.custom-map-tooltip {
+  background: rgba(7, 13, 26, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0.5rem !important;
+  color: #f1f5f9 !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  font-family: 'Inter', sans-serif !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  white-space: nowrap;
+}
+.custom-map-tooltip::before { display: none !important; }
+.leaflet-tooltip-top.custom-map-tooltip::before { display: none !important; }
+
+/* Popup styling */
+.custom-popup .leaflet-popup-content-wrapper {
+  background: rgba(13, 22, 45, 0.97) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 0.75rem !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+.custom-popup .leaflet-popup-tip {
+  background: rgba(13, 22, 45, 0.97) !important;
+}
+
+/* Nav active indicator transition */
+.nav-active-indicator { transition: all 0.3s ease; }
+

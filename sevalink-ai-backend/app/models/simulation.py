@@ -8,7 +8,7 @@ class SimulationNeed(Base):
     location = Column(String, index=True)
     lat = Column(Float, nullable=True)
     lng = Column(Float, nullable=True)
-    urgency = Column(String) # Low, Medium, High, Critical
+    urgency_level = Column("urgency", String) # Low, Medium, High, Critical
     need_type = Column(String) # For visualization parity
     people_affected = Column(Integer)
     is_simulation = Column(Boolean, default=True)

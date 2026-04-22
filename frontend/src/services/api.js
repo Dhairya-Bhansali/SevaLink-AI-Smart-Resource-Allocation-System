@@ -19,6 +19,7 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
   getAnalytics: () => api.get('/dashboard/analytics'),
   optimizedMatch: () => api.post('/matches/optimized'),
+  optimizedSimMatch: () => api.post('/matches/optimized-sim'),
 };
 
 export const systemAPI = {
@@ -28,6 +29,7 @@ export const systemAPI = {
 export const needsAPI = {
   getAll: () => api.get('/needs'),
   getPrioritized: () => api.get('/needs/prioritized'),
+  create: (data) => api.post('/needs/upload', data),
   uploadSurvey: (formData) => api.post('/needs/upload-survey', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -35,7 +37,9 @@ export const needsAPI = {
 
 export const volunteerAPI = {
   create: (data) => api.post('/volunteers', data),
-  match: (needId) => api.post('/matches/match-volunteers', { need_id: needId })
+  match: (needId) => api.post('/matches/match-volunteers', { need_id: needId }),
+  matchSim: (simNeedId) => api.post('/matches/match-sim', { sim_need_id: simNeedId }),
+  assign: (needId, volunteerId, isSim) => api.post('/matches/assign', { need_id: needId, volunteer_id: volunteerId, is_simulation: isSim })
 };
 
 export const simulationAPI = {

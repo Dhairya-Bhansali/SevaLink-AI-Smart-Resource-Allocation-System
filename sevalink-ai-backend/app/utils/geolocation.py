@@ -15,6 +15,19 @@ def get_coordinates(location: str, retries: int = 3):
     if not location or location.lower() == "unknown":
         return None, None
 
+    # Hardcoded bypass for hackathon reliability, avoiding Nominatim 403 rate limits
+    city_map = {
+        "ahmedabad": (23.0225, 72.5714),
+        "surat": (21.1702, 72.8311),
+        "pune": (18.5204, 73.8567),
+        "mumbai": (19.0760, 72.8777),
+        "delhi": (28.7041, 77.1025),
+        "gandhinagar": (23.2156, 72.6369)
+    }
+
+    if location.lower() in city_map:
+        return city_map[location.lower()]
+
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": location,

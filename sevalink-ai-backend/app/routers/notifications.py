@@ -76,3 +76,17 @@ def mark_notification_read(
     db.commit()
 
     return {"detail": "Marked read successfully"}
+
+# =========================
+# Mark All Read
+# =========================
+
+@router.post("/mark-all-read")
+def mark_all_notifications_read(db: Session = Depends(database.get_db)):
+    """
+    Mark all unread notifications as read.
+    """
+    db.query(notif_model.Notification).filter(notif_model.Notification.is_read == False).update({"is_read": True})
+    db.commit()
+
+    return {"detail": "Marked all as read successfully"}

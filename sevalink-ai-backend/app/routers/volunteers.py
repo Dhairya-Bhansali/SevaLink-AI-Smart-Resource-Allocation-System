@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth2 import AuthJWT
 from sqlalchemy.orm import Session
 from typing import List
 from .. import database
@@ -13,8 +13,8 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=schema.VolunteerResponse)
-def create_volunteer(volunteer: schema.VolunteerCreate, db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
+def create_volunteer(volunteer: schema.VolunteerCreate, db: Session = Depends(database.get_db)):
+    # Open registration - no auth required
     v_data = volunteer.model_dump()
     if v_data.get("lat") is None or v_data.get("lng") is None:
         lat, lng = get_coordinates(volunteer.location)

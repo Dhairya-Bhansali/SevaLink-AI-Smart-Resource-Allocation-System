@@ -26,8 +26,9 @@ const Sidebar = () => {
     navigate('/login');
   };
 
-  // Hide sidebar on auth pages
+  // Hide sidebar on auth pages or public volunteer page when not logged in
   if (['/login', '/register'].includes(location.pathname)) return null;
+  if (!isAuthenticated && location.pathname === '/volunteer') return null;
 
   return (
     <div className="w-64 h-screen fixed top-0 left-0 flex flex-col z-20"
@@ -47,7 +48,7 @@ const Sidebar = () => {
         </div>
         {/* Status indicator */}
         <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-          <div className="w-2 h-2 bg-emerald-400 rounded-full pulse-dot"></div>
+          <div className="w-2 h-2 bg-emerald-400 rounded-full pulse-dot-green"></div>
           <span className="text-xs text-emerald-400 font-medium">AI Systems Online</span>
         </div>
       </div>
@@ -96,7 +97,7 @@ const Sidebar = () => {
         )}
         <div className="text-xs text-slate-600">
           <p className="font-semibold text-slate-500">SevaLink AI v2.0</p>
-          <p className="mt-0.5">Powered by Gemini 1.5 Flash</p>
+          <p className="mt-0.5">Powered by Gemini 2.5 Flash</p>
         </div>
       </div>
     </div>
@@ -112,19 +113,21 @@ const ProtectedRoute = ({ children }) => {
 // Also we need to export Main block because Sidebar uses useNavigate
 const MainContent = () => {
   const location = useLocation();
+  const isAuthenticated = !!localStorage.getItem('token');
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
+  const hideSidebar = isAuthPage || (!isAuthenticated && location.pathname === '/volunteer');
   
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className={`${isAuthPage ? 'w-full' : 'ml-64 flex-1'} p-8 max-w-full overflow-x-hidden`}>
+      <main className={`${hideSidebar ? 'w-full' : 'ml-64 flex-1'} p-8 max-w-full overflow-x-hidden`}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/volunteer" element={<ProtectedRoute><VolunteerRegistration /></ProtectedRoute>} />
+          <Route path="/volunteer" element={<VolunteerRegistration />} />
         </Routes>
       </main>
     </div>

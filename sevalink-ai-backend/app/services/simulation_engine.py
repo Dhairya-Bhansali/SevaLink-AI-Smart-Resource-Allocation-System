@@ -39,7 +39,7 @@ def simulate_disaster(disaster_type: str, city: str, db: Session) -> List[sim_mo
             location=f"Simulated Zone {i+1} ({city})",
             lat=n_lat,
             lng=n_lng,
-            urgency=n_urgency,
+            urgency_level=n_urgency,
             need_type=n_type,
             people_affected=n_people,
             is_simulation=True,

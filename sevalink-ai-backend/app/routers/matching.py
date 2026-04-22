@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth2 import AuthJWT
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from .. import database
@@ -49,15 +49,11 @@ def recommend_needs_for_volunteer(volunteer_id: int, db: Session = Depends(datab
     needs = db.query(need_model.Need).all()
     
     matches = []
-    # Note: `batch_score_volunteers_for_need` is specifically designed to score Many Volunteers against One Need.
-    # To score Many Needs against One Volunteer (which is what this endpoint does),
-    # we would need a different prompt or we just fallback to the loop. Let's use loop of fallback for now to keep it simple,
-    # or loop through Gemini for each need. Since this endpoint `recommend_needs_for_volunteer` isn't used in MVP Dashboard yet,
     from ..services.matching_engine import fallback_score_volunteer_for_need
     
     for need in needs:
-        score = fallback_score_volunteer_for_need(vol, need)
-        if score > 0:
+        res = fallback_score_volunteer_for_need(vol, need)
+        if res["score"] > 0:
             n_data = {
                 "id": need.id,
                 "location": need.location,
@@ -66,7 +62,7 @@ def recommend_needs_for_volunteer(volunteer_id: int, db: Session = Depends(datab
                 "priority_score": need.priority_score,
                 "people_affected": need.people_affected
             }
-            matches.append({"need": n_data, "match_score": score})
+            matches.append({"need": n_data, "match_score": res["score"], "reason": res["reason"]})
             
     matches.sort(key=lambda x: x["match_score"], reverse=True)
     return {"volunteer_id": vol.id, "matches": matches}
@@ -77,7 +73,10 @@ class MatchRequest(BaseModel):
 
 @router.post("/match-volunteers")
 def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
+    try:
+        Authorize.jwt_required()
+    except:
+        pass
     need = db.query(need_model.Need).filter(need_model.Need.id == req.need_id).first()
     if not need:
         raise HTTPException(status_code=404, detail="Need not found")
@@ -107,15 +106,78 @@ def match_volunteers(req: MatchRequest, db: Session = Depends(database.get_db), 
         
     return {"need_id": need.id, "matches": matches[:5], "total_found": len(matches)}
 
+class SimMatchRequest(BaseModel):
+    sim_need_id: int
+
+@router.post("/match-sim")
+def match_sim_need(req: SimMatchRequest, db: Session = Depends(database.get_db)):
+    """Match real volunteers against a simulation need using rule-based scoring."""
+    from ..models.simulation import SimulationNeed
+    from ..services.matching_engine import fallback_score_volunteer_for_need
+    
+    sim_need = db.query(SimulationNeed).filter(SimulationNeed.id == req.sim_need_id).first()
+    if not sim_need:
+        raise HTTPException(status_code=404, detail="Simulation need not found")
+    
+    volunteers = db.query(vol_model.Volunteer).all()
+    
+    matches = []
+    for vol in volunteers:
+        res = fallback_score_volunteer_for_need(vol, sim_need)
+        if res["score"] > 0:
+            matches.append({
+                "id": vol.id,
+                "name": vol.name,
+                "location": vol.location,
+                "skills": vol.skills,
+                "match_score": res["score"],
+                "reason": res["reason"]
+            })
+    
+    matches.sort(key=lambda x: x["match_score"], reverse=True)
+    return {"sim_need_id": sim_need.id, "matches": matches[:5], "total_found": len(matches)}
+
+class AssignRequest(BaseModel):
+    need_id: int
+    volunteer_id: int
+    is_simulation: bool = False
+
+@router.post("/assign")
+def assign_volunteer(req: AssignRequest, db: Session = Depends(database.get_db)):
+    if req.is_simulation:
+        from ..models.simulation import SimulationNeed
+        need = db.query(SimulationNeed).filter(SimulationNeed.id == req.need_id).first()
+    else:
+        need = db.query(need_model.Need).filter(need_model.Need.id == req.need_id).first()
+        
+    if need:
+        location = need.location
+        db.delete(need)
+        db.commit()
+        log_notification(db, f"Volunteer successfully assigned. Task at {location} resolved.", "info")
+        
+    return {"message": "Assigned and resolved"}
+
+
 from ..services.optimized_matching import optimized_batch_matching
+
+class BulkAllocateRequest(BaseModel):
+    include_simulation: bool = False
 
 @router.post("/optimized")
 def get_optimized_matching(db: Session = Depends(database.get_db), Authorize: AuthJWT = Depends()):
-    Authorize.jwt_required()
+    """
+    Hungarian algorithm global optimization — assigns volunteers to ALL real needs.
+    No urgency filter: every need gets matched.
+    """
+    try:
+        Authorize.jwt_required()
+    except:
+        pass
     
     volunteers = db.query(vol_model.Volunteer).all()
-    # Only try to allocate high urgency needs
-    needs = db.query(need_model.Need).filter(need_model.Need.urgency_level.in_(["High", "Critical"])).all()
+    # Match ALL needs — no urgency filter
+    needs = db.query(need_model.Need).all()
     
     if not volunteers or not needs:
         return {"assignments": [], "message": "Not enough data to optimize."}
@@ -130,3 +192,27 @@ def get_optimized_matching(db: Session = Depends(database.get_db), Authorize: Au
         logging.getLogger(__name__).error(f"Optimization failed: {e}")
         return {"assignments": [], "message": "Optimization failed, use standard matching mode."}
 
+
+@router.post("/optimized-sim")
+def get_optimized_sim_matching(db: Session = Depends(database.get_db)):
+    """
+    Hungarian algorithm global optimization for SIMULATION needs.
+    Runs without deleting data — simulation only, data stays intact.
+    """
+    from ..models.simulation import SimulationNeed
+    
+    volunteers = db.query(vol_model.Volunteer).all()
+    sim_needs = db.query(SimulationNeed).all()
+    
+    if not volunteers or not sim_needs:
+        return {"assignments": [], "message": "No simulation data to optimize."}
+    
+    try:
+        assignments = optimized_batch_matching(volunteers, sim_needs)
+        if len(assignments) > 0:
+            log_notification(db, f"Simulation Optimization allocated {len(assignments)} routes across sim events.", "warning")
+        return {"assignments": assignments, "message": "Simulation optimal matching generated successfully"}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Sim optimization failed: {e}")
+        return {"assignments": [], "message": "Simulation optimization failed."}

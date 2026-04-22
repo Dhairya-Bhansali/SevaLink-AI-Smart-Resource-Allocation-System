@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
-from fastapi_jwt_auth.exceptions import AuthJWTException
+from fastapi_jwt_auth2.exceptions import AuthJWTException
 from dotenv import load_dotenv
 
 from .routers import volunteers, needs, matching, dashboard, auth

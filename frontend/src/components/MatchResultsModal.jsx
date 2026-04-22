@@ -1,8 +1,16 @@
 import React from 'react';
 import { X, CheckCircle, MapPin, Star } from 'lucide-react';
 
-const MatchResultsModal = ({ isOpen, onClose, matches, need }) => {
+const MatchResultsModal = ({ isOpen, onClose, matches, need, onAssign }) => {
   if (!isOpen) return null;
+
+  const handleAssign = async (match) => {
+    if (onAssign) {
+      await onAssign(match.id);
+    }
+    alert(`Successfully assigned ${match.name || 'Volunteer'} to ${need?.location || 'this assignment'}.`);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -40,14 +48,16 @@ const MatchResultsModal = ({ isOpen, onClose, matches, need }) => {
                     <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
                       {match.name || 'Volunteer'}
                       <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                        {typeof match.match_score === 'number' ? `${match.match_score.toFixed(0)}% Match` : 'Matched'}
+                        {match.match_score != null && !isNaN(Number(match.match_score)) ? `${Number(match.match_score).toFixed(0)}% Match` : 'Matched'}
                       </span>
                     </h3>
                     <div className="flex items-center text-sm text-slate-400 gap-4">
                       <span className="flex items-center gap-1"><MapPin size={14} /> {match.location || 'Unknown'}</span>
                     </div>
                   </div>
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-blue-500/30">
+                  <button 
+                    onClick={() => handleAssign(match)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-blue-500/30">
                     Assign
                   </button>
                 </div>

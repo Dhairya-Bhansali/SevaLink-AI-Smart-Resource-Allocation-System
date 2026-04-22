@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from fastapi_jwt_auth import AuthJWT
+import bcrypt
+from fastapi_jwt_auth2 import AuthJWT
 from pydantic import BaseModel
 import os
 
@@ -14,11 +14,13 @@ router = APIRouter(
     tags=["authentication"]
 )
 
-# Password hashing setup
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+# Password hashing setup using direct bcrypt
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # JWT Settings
 class Settings(BaseModel):
@@ -55,9 +57,7 @@ def register(
         )
 
     # Hash password
-    hashed_pwd = pwd_context.hash(
-        user.password
-    )
+    hashed_pwd = hash_password(user.password)
 
     # Validate role
     valid_roles = ["Admin", "NGO", "Volunteer"]
@@ -111,10 +111,7 @@ def login(
             detail="Incorrect username or password"
         )
 
-    if not pwd_context.verify(
-        user.password,
-        db_user.hashed_password
-    ):
+    if not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password"
